@@ -1,0 +1,53 @@
+- name: Create/update secret key
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Create/update private key
+      block:
+        - name: Create/update private key
+          community.crypto.openssl_privatekey_pipe:
+            content: >-
+              {{
+                lookup(
+                  'community.sops.sops',
+                  'private_key.pem.sops',
+                  empty_on_not_exist=true,
+                )
+                | default(omit, true)
+              }}
+          no_log: true
+          register: private_key_temp
+
+        - name: Update encrypted key on disk
+          community.sops.sops_encrypt:
+            path: private_key.pem.sops
+            content_text: "{{ private_key_temp.privatekey }}"
+          no_log: true
+          when: private_key_temp is changed
+          # The 'when' is not strictly needed (module is idempotent)
+          # (But: don't want to pass secret around unnecessarily)
+
+      always:
+        - name: Hide variable private_key_temp
+          ansible.builtin.set_fact:
+            private_key_temp: ''
+
+    # Later...
+
+    - name: Use secret key
+      ansible.builtin.debug:
+        msg: >-
+          {{
+            lookup('community.sops.sops', 'private_key.pem.sops')[:60]
+          }}...
+
+    - name: Copy secret key to server (there, store it unencrypted)
+      ansible.builtin.copy:
+        content: >-
+          {{
+            lookup('community.sops.sops', 'private_key.pem.sops')
+          }}
+        dest: /tmp/private-key.key
+        # owner: root
+        # group: root
+        mode: "0400"

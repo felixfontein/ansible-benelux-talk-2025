@@ -1,0 +1,25 @@
+- name: Load encrypted data
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Show secret key
+      ansible.builtin.debug:
+        msg: "{{ lookup('community.sops.sops', 'key.sops') }}"
+
+    - name: Decrypt secret key
+      ansible.builtin.debug:
+        msg: >-
+          {{
+            lookup('ansible.builtin.file', 'key.sops')
+            | community.sops.decrypt(input_type='json', output_type='binary')
+          }}
+
+    - name: Load secret token
+      ansible.builtin.debug:
+        msg: >-
+          {{
+            (
+              lookup('community.sops.sops', 'secrets.sops.yaml')
+              | ansible.builtin.from_yaml
+            ).token
+          }}

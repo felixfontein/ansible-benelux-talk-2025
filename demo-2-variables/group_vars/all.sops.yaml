@@ -1,0 +1,39 @@
+encrypted_group_var: ENC[AES256_GCM,data:YNYJ583yfGZ1ZS0IfqouuXH0A7DcWGQ=,iv:C0jLIpcTB4Y4rhzr4hVGcqGOWkeEtf8fV7cXmTo/ZNs=,tag:fsQDx5Yq8TPv0H6P68Nnjg==,type:str]
+sops:
+    kms: []
+    gcp_kms: []
+    azure_kv: []
+    hc_vault: []
+    age: []
+    lastmodified: "2025-01-21T20:51:10Z"
+    mac: ENC[AES256_GCM,data:tox9zN8VB81vih5X+jDLfMGRDZD29+qwDw7PgYwfgPn6FnjQ4MWSePhum0d36y1Wu8L82KZVKwfpFApYmYl5v87TZJJRJ0EPbHenh4cGwly6sXFt27k/uCzKPEuErPOcvRyDG4xV5AuH7qGJqyAaH/mr1RRykr4SPMo/Eiw0okI=,iv:XcxJGXlbTSkTj4vhCjKJXkLeHH6OnQAAN1+V8k0kjtE=,tag:hoV5e93h6coUKByMaL9QDQ==,type:str]
+    pgp:
+        - created_at: "2025-01-21T20:50:57Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            wcBMAyUpShfNkFB/AQgArbhiAohjtYE1Yz1LuNrJyTfwi+Wr7MiX1RmxlyFY2Yzq
+            IEyeSkONF1ZaCQqn6ugcAt8UrWdLI2JqK+9tAc0bPEPRtTBPwM9qeTkTDQPt+0Tm
+            TGIY1Dq8c50CBVUiNNxoGr1TzeDbyj5YxXMAZqy8uvzwhPYrxqWkMgawt4h4XbTM
+            QA37QUDY6wrqUMdrR0BRZqp7v+VVzNWKGZTi4uQC2WOnq0rvFsd+5VNHaOTRxqW2
+            NNpjOVZ5reoS1wL/vtX53xaRfiyICdYD2cZOYi4RoY5ceaiXKAEm4rMosTX3WHj8
+            2Krtg1Tiej9ZLpydSfaTocZPpDg40Ucjb2lc6lVLJtJRAVYrdaWucoInXuxtPjOS
+            0GZkp6ouGYyTseUCZZhg+SEEZGXEMYhFluLY4fzVLm/Ct+09FuDMc2D41Dlu7ZUg
+            RzaIwA3P7yRUUUSgTP20im76
+            =KnQc
+            -----END PGP MESSAGE-----
+          fp: FBC7B9E2A4F9289AC0C1D4843D16CEE4A27381B4
+        - created_at: "2025-01-21T20:50:57Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            wYwDXFUltYFwV4MBA/0SjXDeEWEk8d+9fkHolqK0snUihmExPz8CYFJXJKS3GL2s
+            wPWFczRcSslTq9aMrXsUX+TOzOQfVhV4n1q9BQhhITw/yQU1dmRIufEmZ5u4J3SM
+            IRl3hdHWUIkk39DiTe+2tGh2/rbCv1Eo7ChbtkhybRSTodfQwiQQwNickW93bdJR
+            AVi+OPYP9Tn4oHOLlCj8R3qGwnp03FZdco2mdibERCp7vnl0mbFz+sm4hbt7Dg9r
+            One2gh7AyMYinvB9AqT7/4Klk8+qCRyoIk2z4KFM9u7D
+            =I4mO
+            -----END PGP MESSAGE-----
+          fp: D7229043384BCC60326C6FB9D8720D957C3D3074
+    unencrypted_suffix: _unencrypted
+    version: 3.9.1

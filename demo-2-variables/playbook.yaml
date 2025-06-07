@@ -1,0 +1,25 @@
+- name: Test playbook
+  hosts: all
+  gather_facts: false
+  tasks:
+    # Replacements of vars_files:
+
+    - name: Load encrypted variables (without interpolation)
+      community.sops.load_vars:
+        file: secrets.sops.yaml
+        expressions: ignore
+      tags: always
+      no_log: true
+
+    - name: Load encrypted variables (with interpolation)
+      community.sops.load_vars:
+        file: secret-vars.sops.yaml
+        expressions: evaluate-on-load
+      tags: always
+      no_log: true
+
+    # Regular tasks:
+
+    - name: Show all host vars
+      ansible.builtin.debug:
+        msg: "{{ hostvars[inventory_hostname] }}"

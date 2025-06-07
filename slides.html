@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <title>Using SOPS to manage secrets in Ansible</title>
+    <link rel="stylesheet" href="lib/reveal.css">
+    <link rel="stylesheet" href="lib/theme/white.css">
+    <link rel="stylesheet" href="ext/highlight/monokai.css" />
+    <script src="ext/highlight/highlight.js"></script>
+    <script src="ext/notes/notes.js"></script>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <h2>Using SOPS to manage secrets in Ansible</h2>
+          <p>
+            <small><a href="https://felix.fontein.de/">Felix Fontein</a> @ <a href="https://www.meetup.com/ansible-benelux/events/307176135/">Ansible Benelux</a></small>
+          </p>
+          <p style="display: flex; justify-content: center; align-items: center; gap: 50px;">
+            SOPS
+            <img src="images/ansible-community-mark-black.svg" style="height: 100px;">
+          </p>
+          <aside class="notes">
+            Note that all views, information, and errors present in this talk are mine personally.
+          </aside>
+        </section>
+        <section>
+          <h2>Contents</h2>
+          <ul>
+            <li>Introductions</li>
+            <li>Secrets in Ansible → Ansible Vault</li>
+            <li>Other secret providers</li>
+            <li>SOPS in Ansible</li>
+            <li>Demo</li>
+            <li>Q&amp;A</li>
+          </ul>
+        </section>
+        <section>
+          <h2>Who am I?</h2>
+          <p>
+            Software engineer who also manages Linux servers
+          </p>
+          <p class="fragment">
+            Ansible user (since ~2015)<br>
+            Ansible contributor (since 2016/2017)<br>
+            Ansible collection (co-)maintainer (since 2020)<br>
+            Ansible Community Steering Committee member<br>
+          </p>
+          <p class="fragment">
+            SOPS user (since ~2020)<br>
+            SOPS contributor (since ~2020)<br>
+            SOPS co-maintainer (since 2023)<br>
+          </p>
+          <aside class="notes">
+            ...
+          </aside>
+        </section>
+        <section>
+          <h2>What is SOPS?</h2>
+          <p>
+            Started as internal Mozilla tool: <b>"Secret OPerationS"</b>
+          </p>
+          <p class="fragment">
+            SOPS allows to interactively edit encrypted files<br>
+          </p>
+          <p class="fragment">
+            SOPS handles <b>structured data</b> (YAML, JSON, INI, ENV) or <b>binary data</b><br>
+          </p>
+          <p class="fragment">
+            Per-file access control through identities<br>
+          </p>
+          <p class="fragment">
+            not so alive in 2021, 2022; moved to CNCF in 2023
+          </p>
+          <aside class="notes">
+            History:
+            <ul>
+              <li>
+                2016: created as internal tool, first version in Python; then rewritten in Go (also 2016)
+              </li>
+              <li>
+                2021: <a href="https://github.com/getsops/sops/discussions/927">project not really maintained anymore</a>
+              </li>
+              <li>
+                Project owned by Mozilla, and compliance requirements disallow external maintainers
+              </li>
+              <li>
+                Early 2023: <a href="https://github.com/cncf/sandbox/issues/28">application as CNCF Sandbox project</a>
+                with new set of maintainers outside Mozilla
+              </li>
+              <li>CNCF = Cloud Native Computing Foundation</li>
+              <li>
+                There seems to have been a lot of legal paperwork involved...
+              </li>
+              <li>
+                Mid May 2023: application accepted
+              </li>
+              <li>
+                End of June 2023: repositories transferred from <code>mozilla</code> to <code>getsops</code> GH organization
+              </li>
+              <li>
+                End of August 2023: I became co-maintainer
+              </li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>What is SOPS?</h2>
+          <ul>
+            <li>
+              <b>Encrypt values and comments</b>, but not keys
+            </li>
+            <li>
+              Give access based on <b>identities</b>:
+              <ul>
+                <li>
+                  👤🤖 PGP/Age public keys
+                </li>
+                <li>
+                  👤🤖☁️ HC Vault's transit secrets engine
+                </li>
+                <li>
+                  🤖☁️ AWS KMS, Google Cloud KMS, Azure Key Vault
+                </li>
+                <li>
+                  Shamir's secret sharing: require that N out of M identities (key groups)
+                </li>
+              </ul>
+            </li>
+          </ul>
+          <aside class="notes">
+            <ul>
+              <li>
+                Comments because you tend to comment out values.
+              </li>
+              <li>
+                Keys because you want to be able to figure out where something is defined
+              </li>
+              <li>
+                Hashicorp Vault's transit secret engine provides cryptographic operations (encrypt, decrypt, sign, verify) as service
+                without exposing the cryptographic keys to the API user
+                <br>
+                No idea whether/how compatible it is with OpenBao.
+              </li>
+              <li>
+                Similar for KMSes in Cloud
+              </li>
+              <li>
+                Identities can be specified in key groups; Shamir: need (at least one) key from N out of M key groups to encrypt/decrypt
+              </li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>What is SOPS?</h2>
+          <p>
+            Quick demo!
+          </p>
+          <aside class="notes">
+            <ul>
+              <li>
+                <code>.sops.yaml</code>
+              </li>
+              <li>
+                Create SOPS encrypted file
+                <br>
+                <code>sops edit secrets.yaml</code>
+              </li>
+              <li>
+                Look at encrypted file
+                <br>
+                <code>less secrets.yaml</code>
+                <br>
+                Explain basic principle (encrypted file key, MAC)
+              </li>
+              <li>
+                Decrypt SOPS encrypted file
+                <br>
+                <code>sops decrypt secrets.yaml</code>
+              </li>
+              <li>
+                Edit SOPS encrypted file
+                <br>
+                <code>sops edit secrets.yaml</code>
+              </li>
+              <li>
+                Look at <code>create-config.yml</code> script
+              </li>
+            </ul>
+          </aside>
+        </section>
+        <section data-transition="fade-out">
+          <h2>What is Ansible?</h2>
+          <p>
+            Orchestration software
+          </p>
+          <p class="fragment">
+            Runs through tasks that update state in some way
+          </p>
+          <p class="fragment">
+            Usually needs <b>credentials</b> that should be kept secret
+            <br>
+            (Access servers/services, put them into config files, ...)
+          </p>
+          <img src="images/ansible-community-mark-black.svg" style="height: 200px;">
+          <aside class="notes">
+            You likely already know all that if you're in this talk ☺
+          </aside>
+        </section>
+        <section data-transition="convex" data-transition-speed="slow">
+          <h2>A cat picture</h2>
+          <img src="images/cat-3.jpeg">
+          <aside class="notes">
+            So you don't fall asleep, here's a cat picture.
+          </aside>
+        </section>
+        <section data-transition="fade-in">
+          <h2>Secrets in Ansible</h2>
+          <p>
+            Put it in playbook ☹
+          </p>
+          <pre><code class="hljs yaml" data-trim data-line-numbers="|7"><script type="text/template">
+            ---
+            - name: Change DNS entry
+              hosts: localhost
+              tasks:
+                - name: Set up SPF for foo.com
+                  community.dns.hetzner_dns_record_set:
+                    hetzner_token: aBcDeFgHiJkLmNoPqRsTuVwXyZ012345
+                    state: present
+                    zone: foo.com
+                    record: foo.com
+                    type: TXT
+                    ttl: 300
+                    value:
+                      - v=spf1 a mx -all
+          </script></code></pre>
+          <aside class="notes">
+            Don't do this!
+            <br>
+            → Secrets are private, playbook is less private
+          </aside>
+        </section>
+        <section>
+          <h2>Secrets in Ansible</h2>
+          <p>
+            Put it in a vars file ☹
+          </p>
+          <pre><code class="hljs yaml" data-trim data-line-numbers="4-5,9"><script type="text/template">
+            ---
+            - name: Change DNS entry
+              hosts: localhost
+              vars_files:
+                - secrets.yml
+              tasks:
+                - name: Set up SPF for foo.com
+                  community.dns.hetzner_dns_record_set:
+                    hetzner_token: "{{ hetzner_token }}"
+                    state: present
+                    ...
+          </script></code></pre>
+          secrets.yml:
+          <pre><code class="hljs yaml" data-trim data-line-numbers="3-4,8"><script type="text/template">
+            ---
+            hetzner_token: aBcDeFgHiJkLmNoPqRsTuVwXyZ012345
+          </script></code></pre>
+          <aside class="notes">
+            Slightly better, but still: don't do this!
+            <ul>
+              <li>If you check this in, anyone with access to repo can see the secrets.</li>
+              <li>If you don't check it in, you have plenty of other problems...</li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Secrets in Ansible</h2>
+          <p>
+            Use
+            <br>
+            <b><code style="color: darkred;">ansible-vault encrypt secrets.yml</code></b>
+            <br>
+            to encrypt the secrets.yml file:
+          </p>
+          <pre><code data-trim data-line-numbers><script type="text/template">
+            $ANSIBLE_VAULT;1.1;AES256
+            32666132313662653062353064303638626334326362653031656535303834363962373131633137
+            6638663437653762326539333866383834313533326433330a386333653933633230623538616438
+            33333331616665646532383164653363303233323537626264323538616564626132313535316132
+            3166636563626633360a386535376433393862633139306337666532326133376261373239313863
+            66326462313361356663383534623762356633653933633332633537363565363962303833666631
+            34373832653234336530306630663632393635383233363030373539613064353737643961363863
+            333833333861646130336263373466373765
+          </script></code></pre>
+          <p>
+            (The password is <code>asdf</code>.)
+          </p>
+          <aside class="notes">
+            <ul>
+              <li>Don't use this password ;-)</li>
+              <li>Hard to find file where a variable is defined</li>
+              <li>
+                Will be explained later:
+                <br>
+                <code>--ask-vault-password</code>
+                <br>
+                <code>--vault-password-file</code>
+                <br>
+                <code>--vault-id</code>
+              </li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Secrets in Ansible</h2>
+          <p>
+            Use
+            <br>
+            <b><code style="color: darkred;">ansible-vault encrypt_string</code></b>
+            <br>
+            to encrypt only the token and keep the rest readable:
+          </p>
+          <pre><code class="hljs yaml" data-trim data-line-numbers><script type="text/template">
+            ---
+            hetzner_token: !vault |
+              $ANSIBLE_VAULT;1.1;AES256
+              30393064316433636636373336363538663034643135363938646665393661353833633865313765
+              3835366434646339313337663335393865336163663434310a316161313662666466333332353731
+              64663064366461643162666137303737643164376134303034306366383830336232363837636638
+              3830653338626130360a313639623231353931356563313065373661303262646337383534663932
+              64353461663065333362346264326335373032313333343539646661656634653138646332313639
+              3566313765626464613734623664663266336237646139373935
+          </script></code></pre>
+          <p>
+            (The password is <code>asdf</code>.)
+          </p>
+          <aside class="notes">
+            <ul>
+              <li>Only works for values</li>
+              <li>Don't store secrets in keys!</li>
+              <li>Nice: you can grep for variable to find where it is defined</li>
+              <li>Also: very similar to how SOPS works</li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Secrets in Ansible</h2>
+          <p>
+            How does it work?
+          </p>
+          <ul>
+            <li class="fragment">
+              Provide password by typing it, from a file on disk, from a custom script
+            </li>
+            <li class="fragment">
+              Use more than one password if needed
+              <br>
+              (Use vault IDs to distinguish passwords)
+            </li>
+            <li class="fragment">
+              Security: PBKDF2-SHA256 (10000 iterations of salt + password), HMAC-SHA256, AES256-CTR
+              <br>
+              <span style="color: red">Security depends fully on strength of password!</span>
+            </li>
+          </ul>
+          <aside class="notes">
+            <ul>
+              <li>
+                <code>--ask-vault-password</code>
+                <br>
+                <code>--vault-password-file</code>
+                <br>
+                <code>--vault-id</code>
+              </li>
+              <li>Security is OK if password is strong</li>
+              <li>Best to randomly generate them</li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Secrets in Ansible</h2>
+          <p>
+            Problems:
+          </p>
+          <ul>
+            <li class="fragment">
+              <b>Changing password / reencrypting</b> is not so easy with included tooling
+              <br>
+              (Search for <code>$ANSIBLE_VAULT;</code>...)
+            </li>
+            <li class="fragment">
+              <b>Password handling</b>
+              <br>
+              (Where to store it? How to exchange it with coworkers who need to know?)
+            </li>
+          </ul>
+          <aside class="notes">
+            <ul>
+              <li>Need tooling to rekey all values in all files</li>
+              <li><a href="https://stackoverflow.com/a/67161907">Some folks have scripts for that</a></li>
+              <li>
+                Store password in Hashicorp Vault/Bitwarden/...
+                <br>
+                (Create script to automatically retrieve it for Ansible)
+              </li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Other secret providers</h2>
+          <p>
+            Use lookup plugins:
+          </p>
+          <small><ul>
+            <li><code>community.hashi_vault.hashi_vault</code>*</li>
+            <li><code>community.general.bitwarden</code>*</li>
+            <li><code>community.general.credstash</code></li>
+            <li><code>community.general.cyberarkpassword</code></li>
+            <li><code>community.general.dsv</code></li>
+            <li><code>community.general.keyring</code></li>
+            <li><code>community.general.lastpass</code></li>
+            <li><code>community.general.onepassword</code>*</li>
+            <li><code>community.general.passwordstore</code></li>
+            <li><code>community.general.revbitspss</code></li>
+            <li><code>community.general.tss</code></li>
+          </ul></small>
+          <p>
+            <small>(* = and related plugins/modules)</small>
+          </p>
+          <aside class="notes">
+            Also in ansible-core:
+            <ul>
+              <li><code>ansible.builtin.unvault</code> lookup</li>
+              <li><code>ansible.builtin.unvault</code> filter</li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Other secret providers</h2>
+          <p>
+            Disadvantages:
+          </p>
+          <ul>
+            <li class="fragment">
+              <b>No easy way to query ungrouped secrets</b>
+              <br>
+              (Filters for mass retrieval are often not flexible enough)
+            </li>
+            <li class="fragment">
+              Have to watch out for <b>pitfalls</b>
+              <br>
+              (Lazy evaluation, one lookup per host, ...)
+              <br>
+              <ul class="fragment">
+                <li><code>ansible.builtin.set_fact</code></li>
+                <li><code>run_once: true</code></li>
+              </ul>
+            </li>
+          </ul>
+          <aside class="notes">
+            <ul>
+              <li>ungrouped example: all secrets needed in this playbook!</li>
+              <li>Workaround: discipline; uniform naming schemes</li>
+              <li><code>ansible.builtin.unvault</code> lookup and filter have same problems</li>
+            </ul>
+          </aside>
+        </section>
+        <section data-transition="fade-out">
+          <h2>Other secret providers</h2>
+          <p>
+            Would be great to have replacements for:
+          </p>
+          <ul>
+            <li><code>vars_files</code> directive</li>
+            <li><code>host_vars</code> / <code>group_vars</code> directories</li>
+            <li><code>ansible.builtin.include_vars</code> action</li>
+          </ul>
+          <aside class="notes">
+            <ul>
+              <li>
+                No replacement for <code>vars_files</code> possible
+                <br>
+                (But: can use replacement for <code>include_vars</code>)
+              </li>
+              <li>
+                Vars plugins for <code>host_vars</code> / <code>group_vars</code>
+              </li>
+              <li>
+                Action plugin for loading facts; unfortunately cannot load variables;
+                <br>
+                ansible-core has special handling of <code>ansible.builtin.include_vars</code>'s
+                return values
+              </li>
+            </ul>
+          </aside>
+        </section>
+        <section data-transition="convex" data-transition-speed="slow">
+          <h2>Another cat picture</h2>
+          <img src="images/cat-4.jpeg">
+          <aside class="notes">
+            So you don't fall asleep, here's another cat picture.
+          </aside>
+        </section>
+        <section data-transition="fade-in">
+          <h2>SOPS in Ansible</h2>
+          <p>
+            SOPS can do this better, because:
+          </p>
+          <ul>
+            <li>File-based: files are in repository</li>
+            <li>Tooling for re-encryption / re-keying</li>
+            <li>AGE/PGP identities using public keys</li>
+          </ul>
+          <aside class="notes">
+            <ul>
+              <li>
+                Files allow to work similar to Ansible Vault, allows mass-loading of all secrets from a file
+              </li>
+              <li>
+                <code>sops updatekeys</code> and <code>sops rotate</code> update a single file
+              </li>
+              <li>
+                Nice user-management through public keys if you don't use KMSes
+              </li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>SOPS in Ansible</h2>
+          <p>
+            Collection: <code>community.sops</code>
+          </p>
+          <ul>
+            <li>Vars plugin: load encrypted host/group vars</li>
+            <li>Lookup: decrypt secrets or whole files</li>
+            <li>Filter: decrypt data</li>
+            <li>
+              Action: load encrypted vars files
+              <br>
+              (As facts, not as variables...)
+            </li>
+            <li>Module: encrypt data (idempotent)</li>
+            <li>Role: install SOPS</li>
+            <li>Playbook: install SOPS</li>
+          </ul>
+          <aside class="notes">
+            <ul>
+              <li>
+                Action: can interpolate on load time, if requested
+                <br>
+                (Ansible-core does not allow more)
+                <br>
+                <b>Update:</b> will likely change with ansible-core 2.19 (data tagging); <a href="https://github.com/ansible-collections/community.sops/pull/229">WIP PR</a>
+                <br>
+              </li>
+              <li>
+                Hopefully loading as variables (not as facts) will be possible at some point, maybe already for ansible-core 2.20...
+                <br>
+                (Top-level facts almost got deprecated for ansible-core 2.19 without any way for action plugins to create variables...)
+              </li>
+              <li>
+                Playbooks are for convenience
+                <br>
+                (Example: install SOPS in EE)
+              </li>
+            </ul>
+            History:
+            <ul>
+              <li>endorama (Edoardo Tenani) created <code>sops</code> lookup in 2019</li>
+              <li><a href="https://github.com/ansible/ansible/pull/59639">PR in ansible/ansible</a> got closed in 2020</li>
+              <li>mhumeSF (Mike Hume) revived <a href="https://github.com/ansible-collections/community.general/pull/374">PR in community.general</a></li>
+              <li>community.sops split off from community.general in June 2020 before a release of c.g happened</li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Comparison</h2>
+          <table>
+            <tr>
+              <th>
+                Ansible Vault
+              </th>
+              <th>
+                SOPS
+              </th>
+              <th>
+                Client-server solution
+              </th>
+            </tr>
+            <tr class="fragment">
+              <td>
+                "Just works"
+              </td>
+              <td>
+                Broad support
+              </td>
+              <td>
+                Lookup plugin
+              </td>
+            </tr>
+            <tr class="fragment">
+              <td>
+                Password
+              </td>
+              <td>
+                Identities
+              </td>
+              <td>
+                User management
+              </td>
+            </tr>
+            <tr class="fragment">
+              <td>
+                Offline
+              </td>
+              <td>
+                Offline possible
+              </td>
+              <td>
+                Needs cache/proxy
+              </td>
+            </tr>
+          </table>
+          <aside class="notes">
+            <ul>
+              <li>
+                Broad support =
+                <ol>
+                  <li>lookup/filter,</li>
+                  <li>vars plugin for host/group vars,</li>
+                  <li>load vars action</li>
+                </ol>
+              </li>
+              <li>
+                Identities =
+                <ol>
+                  <li>AGE recipient</li>
+                  <li>PGP/GPG key</li>
+                  <li>KMS keys</li>
+                </ol>
+              </li>
+              <li>
+                Big question: scaling
+                <br>
+                → Ansible Vault: depends on how you manage passwords
+                <br>
+                → SOPS: My guess: good for smaller team sizes
+                <br>
+                → YMMV!
+              </li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Demo: variables</h2>
+          <p>
+            Example context: <b>tokens/API keys/credentials</b>
+          </p>
+          <ul>
+            <li>
+              <code>community.sops.sops</code> vars plugin:
+              <br>
+              Load host/group variables
+            </li>
+            <li>
+              <code>community.sops.load_vars</code> action:
+              <br>
+              Load variables (as facts, really)
+              <br>
+              (with or without interpolation)
+            </li>
+          </ul>
+          <aside class="notes">
+            <ul>
+              <li>Look at <code>ansible.cfg</code></li>
+              <li>Look at host and group vars</li>
+              <li>Look at playbook</li>
+              <li>Look at <code>secrets.sops.yaml</code> and <code>secret-vars.sops.yaml</code></li>
+              <li>Run playbook</li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Demo: load and update file</h2>
+          <p>
+            Example context: <b>Private key for TLS</b>
+          </p>
+          <ul>
+            <li>
+              <code>community.sops.sops</code> lookup:
+              <br>
+              Load file contents
+            </li>
+            <li>
+              <code>community.sops.sops_encrypt</code> action:
+              <br>
+              Update file contents
+            </li>
+          </ul>
+          <aside class="notes">
+            <ul>
+              <li>Look at playbook</li>
+              <li>Run playbook</li>
+            </ul>
+            <br>
+            Notes:
+            <ul>
+              <li><code>ansible.builtin.copy</code> writes it <code>content</code> parameter's value to local disk (to transfer it to target)</li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>
+            Demo:
+            <br>
+            Execution Environment
+          </h2>
+          <pre><code class="hljs yaml" data-trim data-line-numbers="6-8,12-13"><script type="text/template">
+            ---
+            version: 3
+            dependencies:
+              ...
+              galaxy:
+                collections:
+                  - name: community.sops
+                    version: 2.0.5
+            additional_build_steps:
+              append_final:
+                - >-
+                  RUN ansible-playbook -v
+                  community.sops.install_localhost
+          </script></code></pre>
+          <aside class="notes">
+            <ul>
+              <li>Look at <code>execution-environment.yml</code></li>
+              <li>Look at <code>build.sh</code></li>
+              <li>Run <code>build.sh</code></li>
+              <li>Look at playbook</li>
+              <li>Look at <code>run.sh</code></li>
+              <li>Run <code>run.sh</code></li>
+            </ul>
+            Alternative:
+            <ul>
+              <li>Store private age/PGP key in AWX's secret store/...</li>
+              <li>Let AWX/... provide that key in the EE instance</li>
+              <li>In the EE instance, use that key (<code>gpg --import</code> task in playbook, ...)</li>
+            </ul>
+          </aside>
+        </section>
+        <section>
+          <h2>Questions</h2>
+          <p>
+            Please ask!
+          </p>
+          <aside class="notes">
+            <ul>
+              <li>...</li>
+            </ul>
+          </aside>
+        </section>
+      </div>
+    </div>
+    <script src="lib/reveal.js"></script>
+    <script>
+      Reveal.initialize({
+        transition: 'none', // 'fade'
+        transitionSpeed: 'fast',
+        pdfSeparateFragments: false,
+        fragments: true,
+        fragmentInURL: true,
+        overview: true,
+        slideNumber: true,
+        hashOneBasedIndex: true,
+        hash: true,
+        plugins: [RevealHighlight, RevealNotes],
+        showNotes: true, // set to false and press 'S' to enable speaker view
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Show secrets
+      ansible.builtin.debug:
+        msg: >-
+          {{
+            lookup('community.sops.sops', 'secrets.sops.yml')
+            | ansible.builtin.from_yaml
+          }}

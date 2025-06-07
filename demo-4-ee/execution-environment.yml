@@ -1,0 +1,29 @@
+---
+version: 3
+dependencies:
+  ansible_core:
+    package_pip: ansible-core==2.18.6
+  ansible_runner:
+    package_pip: ansible-runner==2.4.1
+  galaxy:
+    collections:
+      - name: community.sops
+        version: 2.0.5
+
+images:
+  base_image:
+    name: registry.fedoraproject.org/fedora:41
+
+additional_build_steps:
+  prepend_base:
+    - RUN $PKGMGR install -y python python-pip python-cryptography python-libdnf
+  append_final:
+    - >-
+      RUN ansible-playbook -v
+      community.sops.install_localhost
+    - RUN mkdir /root/.gnupg && chmod 0700 /root/.gnupg/
+    - >-
+      RUN gpg --recv-keys
+      FBC7B9E2A4F9289AC0C1D4843D16CEE4A27381B4
+      D7229043384BCC60326C6FB9D8720D957C3D3074
+    - RUN ls -lah /root/.gnupg/

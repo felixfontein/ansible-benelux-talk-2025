@@ -1,0 +1,9 @@
+---
+creation_rules:
+  # These keys are:
+  # - SOPS Functional Tests Key 1 (https://github.com/mozilla/sops/) <secops@mozilla.com>
+  # - SOPS Functional Tests Key 2 (https://github.com/mozilla/sops/) <secops@mozilla.com>
+  # Available from: https://github.com/getsops/sops/blob/main/pgp/sops_functional_tests_key.asc
+  - pgp: >-
+      FBC7B9E2A4F9289AC0C1D4843D16CEE4A27381B4,
+      D7229043384BCC60326C6FB9D8720D957C3D3074
